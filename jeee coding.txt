@@ -1,0 +1,847 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paw Safe - Premium</title>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- REAL AI LIBRARIES -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #1C1C1E;
+            --primary-gold: #FFD700;
+            --text-white: #FFFFFF;
+            --text-grey: #A1A1A1;
+            --border-color: #333333;
+            --radius: 24px;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            --gradient-gold: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+            --adopt-color: #A020F0; /* Purple for Adoption */
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-white); padding-bottom: 90px; overflow-x: hidden; }
+
+        /* --- UTILITIES --- */
+        .hidden { display: none !important; }
+        .flex { display: flex; gap: 10px; align-items: center; }
+        .flex-col { display: flex; flex-direction: column; gap: 10px; }
+        .center { justify-content: center; align-items: center; }
+        .space-between { justify-content: space-between; }
+        .text-gold { color: var(--primary-gold); }
+        .text-purple { color: var(--adopt-color); }
+        h2, h3 { margin: 0; }
+
+        /* --- BUTTONS --- */
+        .btn { padding: 14px 24px; border: none; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%; }
+        .btn:active { transform: scale(0.97); }
+        .btn-gold { background: var(--primary-gold); color: black; }
+        .btn-purple { background: var(--adopt-color); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary-gold); color: var(--primary-gold); }
+        .btn-red { background: #FF3B30; color: white; }
+        .btn-dark { background: #333; color: white; }
+
+        /* --- INPUTS --- */
+        input, textarea, select { width: 100%; padding: 16px; background: #2C2C2E; border: 1px solid #444; border-radius: 16px; margin-bottom: 15px; color: white; font-size: 1rem; }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary-gold); }
+
+        /* --- LOGIN SCREEN --- */
+        #view-login {
+            height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 30px;
+            background: radial-gradient(circle at top right, #1a1a1a 0%, #000000 100%);
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 3000;
+        }
+        .login-card { background: var(--card-bg); padding: 30px; border-radius: var(--radius); border: 1px solid var(--primary-gold); box-shadow: var(--shadow); }
+        
+        /* --- ADMIN DASHBOARD --- */
+        #view-admin { padding: 20px; padding-bottom: 100px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        
+        /* Admin Tabs */
+        .admin-tabs { display: flex; gap: 5px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;}
+        .tab-btn { flex: 1; min-width: 80px; background: #333; color: #aaa; padding: 10px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+        .tab-btn.active { background: var(--primary-gold); color: black; }
+
+        .admin-card { background: #1C1C1E; border: 1px solid #333; border-radius: 16px; padding: 15px; margin-bottom: 15px; position: relative; }
+        .admin-card.rescue { border-left: 4px solid #FF3B30; }
+        .admin-card.missing { border-left: 4px solid var(--primary-gold); }
+        .admin-card.order { border-left: 4px solid #4CAF50; }
+        .admin-card.adopt { border-left: 4px solid var(--adopt-color); }
+        .admin-card.store { border-left: 4px solid white; }
+        .admin-card.meeting { border-left: 4px solid #3b82f6; } 
+        
+        .delete-btn { position: absolute; top: 15px; right: 15px; background: #FF3B30; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* --- USER APP LAYOUT --- */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: var(--bg-color); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border-color); }
+        .hero-card { background: var(--gradient-gold); color: black; border-radius: var(--radius); padding: 24px; margin: 0 20px 20px; position: relative; overflow: hidden; }
+        
+        /* Product/Missing Grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 20px 20px; }
+        .item-card { background: #1C1C1E; border: 1px solid #333; border-radius: 16px; padding: 10px; overflow: hidden; position: relative; }
+        .item-img { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; margin-bottom: 10px; background: #333; border: 1px solid #444; }
+        
+        /* Adoption Tag */
+        .adopt-tag { position: absolute; top: 10px; right: 10px; background: var(--adopt-color); color: white; font-size: 0.7rem; padding: 4px 8px; border-radius: 8px; font-weight: bold; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: black; padding: 12px; display: flex; justify-content: space-around; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { color: #666; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; gap: 4px; cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--primary-gold); }
+        .nav-item i { font-size: 1.3rem; }
+
+        /* --- MODALS --- */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .modal { background: #1C1C1E; width: 90%; max-width: 400px; border-radius: 30px; padding: 25px; border: 1px solid var(--primary-gold); max-height: 90vh; overflow-y: auto; }
+        
+        /* --- CALL SCREEN --- */
+        .call-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 3000; flex-direction: column; justify-content: space-between; padding: 80px 30px; text-align: center; display: none; }
+        .call-screen.active { display: flex; }
+
+        /* --- PREVIEW --- */
+        #preview-image, #missing-preview, #adopt-preview, #product-preview { width: 100%; height: 200px; object-fit: contain; border-radius: 16px; margin-bottom: 15px; background: #000; display: none; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+
+    <!-- 1️⃣ LOGIN SCREEN -->
+    <div id="view-login">
+        <div style="text-align:center; margin-bottom:40px;">
+            <i class="fa-solid fa-paw" style="font-size: 4rem; color: var(--primary-gold);"></i>
+            <h1 style="color:white; margin-top:10px;">PAW SAFE</h1>
+            <p style="color:gray;">Premium Animal Rescue</p>
+        </div>
+        
+        <div class="login-card">
+            <h3 style="color:var(--primary-gold); margin-bottom:20px;">Access Portal</h3>
+            <input type="text" id="login-email" placeholder="Username (user / admin)">
+            <input type="password" id="login-pass" placeholder="Password (any)">
+            <button class="btn btn-gold" onclick="auth.login()">Login</button>
+        </div>
+    </div>
+
+    <!-- 2️⃣ NGO/ADMIN DASHBOARD -->
+    <div id="view-admin" class="hidden">
+        <div class="admin-header">
+            <div><h2 class="text-gold">Admin Panel</h2><small style="color:gray;">Manage Database</small></div>
+            <button class="btn btn-outline" style="width:auto; padding:8px 15px;" onclick="auth.logout()">Logout</button>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="app.admin.switchTab('rescue')">Rescues</button>
+            <button class="tab-btn" onclick="app.admin.switchTab('missing')">Missing</button>
+            <button class="tab-btn" onclick="app.admin.switchTab('adopt')">Adopt</button>
+            <button class="tab-btn" onclick="app.admin.switchTab('store')">Store</button>
+            <button class="tab-btn" onclick="app.admin.switchTab('orders')">Orders</button>
+        </div>
+
+        <div id="admin-list-container">
+            <!-- Dynamic Content -->
+        </div>
+        
+        <!-- Add Product Button (Only visible in Store tab) -->
+        <button id="admin-add-prod-btn" class="btn btn-gold hidden" style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; font-size:1.5rem; box-shadow:0 10px 20px rgba(255, 215, 0, 0.4); z-index:100;" onclick="app.admin.openAddProduct()">+</button>
+    </div>
+
+    <!-- 3️⃣ USER APP -->
+    <div id="view-app" class="hidden">
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="brand" style="display:flex; gap:10px; align-items:center;">
+                <i class="fa-solid fa-paw"></i> PAW SAFE
+            </div>
+            <div class="flex">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Keerthi" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--primary-gold);" onclick="app.nav('profile')">
+            </div>
+        </div>
+
+        <!-- NAVIGATION SCREENS -->
+        <div id="screens-container">
+            
+            <!-- HOME -->
+            <div id="screen-home">
+                <div class="hero-card">
+                    <h2>Emergency?</h2>
+                    <p style="color:rgba(0,0,0,0.7); margin:10px 0 20px; font-weight:600;">Report injured animals. We send help.</p>
+                    <button class="btn" style="background:black; color:var(--primary-gold);" onclick="app.nav('report')">Report Now</button>
+                </div>
+
+                <div class="flex space-between" style="padding:0 20px; margin-bottom:10px;">
+                    <h3>Find a Friend</h3>
+                    <small class="text-purple" onclick="app.nav('adopt')">Adopt Now</small>
+                </div>
+                <div id="home-adopt-list" style="padding:0 20px; display:flex; gap:10px; overflow-x:auto; padding-bottom:15px;"></div>
+
+                <div class="flex space-between" style="padding:0 20px; margin-bottom:10px; margin-top:10px;">
+                    <h3>Shop</h3>
+                    <small class="text-gold" onclick="app.nav('shop')">Visit Store</small>
+                </div>
+                <div id="home-shop-list" class="grid-2"></div>
+            </div>
+
+            <!-- REPORT SCREEN -->
+            <div id="screen-report" class="hidden">
+                <div style="padding:20px;">
+                    <h2 style="margin-bottom:10px;">Report Injured</h2>
+                    <p style="margin-bottom:20px;">AI Analysis & Rescue Dispatch</p>
+                    
+                    <img id="preview-image" alt="Preview" crossorigin="anonymous">
+
+                    <div id="camera-box" style="border:2px dashed #555; height:150px; display:flex; align-items:center; justify-content:center; border-radius:20px; background:rgba(255,255,255,0.05); margin-bottom:20px;">
+                        <div class="flex" style="gap:20px;">
+                            <label style="text-align:center; cursor:pointer;">
+                                <div style="background:#333; width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:5px;"><i class="fa-solid fa-camera text-gold"></i></div>
+                                <small>Camera</small>
+                                <input type="file" accept="image/*" capture="environment" hidden onchange="app.report.handleFile(this)">
+                            </label>
+                            <label style="text-align:center; cursor:pointer;">
+                                <div style="background:#333; width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:5px;"><i class="fa-solid fa-image text-gold"></i></div>
+                                <small>Gallery</small>
+                                <input type="file" accept="image/*" hidden onchange="app.report.handleFile(this)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="ai-result" class="hidden" style="background:#222; padding:15px; border-radius:15px; border:1px solid var(--primary-gold); margin-bottom:20px;">
+                        <div class="flex space-between"><strong class="text-gold">AI Analysis</strong><span style="font-size:0.8rem; background:rgba(255,215,0,0.2); padding:2px 8px; border-radius:4px;">TENSORFLOW</span></div>
+                        <p id="ai-text" style="margin-top:10px; font-family:monospace;">Initializing Model...</p>
+                    </div>
+
+                    <button id="btn-send-rescue" class="btn btn-gold" disabled onclick="app.report.submit()">Send Rescue Request</button>
+                </div>
+            </div>
+
+            <!-- MISSING PETS SCREEN -->
+            <div id="screen-missing" class="hidden">
+                <div style="padding:20px;">
+                    <div class="flex space-between" style="margin-bottom:20px;">
+                        <h2>Missing Pets</h2>
+                        <button class="btn btn-gold" style="width:auto; padding:8px 20px; font-size:0.8rem;" onclick="app.missing.openModal()">+ Add</button>
+                    </div>
+                    <div id="full-missing-list" class="grid-2" style="padding:0;"></div>
+                </div>
+            </div>
+
+            <!-- ADOPT SCREEN -->
+            <div id="screen-adopt" class="hidden">
+                <div style="padding:20px;">
+                    <div class="flex space-between" style="margin-bottom:20px;">
+                        <h2>Adoption</h2>
+                        <button class="btn btn-purple" style="width:auto; padding:8px 15px; font-size:0.8rem;" onclick="app.adopt.openModal()">Rehome Pet</button>
+                    </div>
+                    <p style="color:gray; margin-bottom:20px; font-size:0.9rem;">Find a new friend or help one find a home.</p>
+                    <div id="full-adopt-list" class="grid-2" style="padding:0;"></div>
+                </div>
+            </div>
+
+            <!-- SHOP SCREEN -->
+            <div id="screen-shop" class="hidden">
+                <div style="padding:20px;">
+                    <h2 style="margin-bottom:20px;">Pet Essentials</h2>
+                    <div id="full-shop-list" class="grid-2" style="padding:0;"></div>
+                </div>
+            </div>
+
+            <!-- PROFILE SCREEN -->
+            <div id="screen-profile" class="hidden">
+                <div style="padding:20px; text-align:center;">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Keerthi" style="width:100px; height:100px; border-radius:50%; border:3px solid var(--primary-gold); margin-bottom:15px;">
+                    <h2>Keerthi</h2>
+                    <p class="text-gold">Level 2 Guardian</p>
+                    <button class="btn btn-outline" style="margin-top:20px;" onclick="auth.logout()">Logout</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTTOM NAV -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="app.nav('home')"><i class="fa-solid fa-house"></i>Home</div>
+            <div class="nav-item" onclick="app.nav('adopt')"><i class="fa-solid fa-heart"></i>Adopt</div>
+            <div class="nav-item" onclick="app.nav('report')"><i class="fa-solid fa-camera"></i>Report</div>
+            <div class="nav-item" onclick="app.nav('missing')"><i class="fa-solid fa-magnifying-glass"></i>Missing</div>
+            <div class="nav-item" onclick="app.nav('shop')"><i class="fa-solid fa-bag-shopping"></i>Shop</div>
+        </div>
+
+    </div>
+
+    <!-- CALL OVERLAY -->
+    <div id="call-screen" class="call-screen">
+        <div style="margin-top:50px;">
+            <div style="width:120px; height:120px; background:#333; border-radius:50%; margin:0 auto 20px; border:4px solid rgba(255,255,255,0.2);"></div>
+            <h2 id="call-name">Emergency Rescue</h2>
+            <p id="call-timer" style="color:gray; margin-top:10px;">Connecting...</p>
+        </div>
+        <div class="flex center">
+            <div onclick="app.call.end()" style="width:70px; height:70px; background:red; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 0 20px rgba(255,0,0,0.5);">
+                <i class="fa-solid fa-phone-slash" style="font-size:1.5rem;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SUCCESS -->
+    <div id="modal-success" class="overlay hidden">
+        <div class="modal" style="text-align:center;">
+            <div style="width:80px; height:80px; background:#333; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid var(--primary-gold);">
+                <i class="fa-solid fa-check" style="font-size:2.5rem; color:var(--primary-gold);"></i>
+            </div>
+            <h3>Success!</h3>
+            <p style="margin-bottom:20px; color:gray;" id="success-msg">Action completed successfully.</p>
+            <button class="btn btn-gold" onclick="document.querySelectorAll('.overlay').forEach(e=>e.classList.add('hidden'));">OK</button>
+        </div>
+    </div>
+
+    <!-- MODAL: MEETING CONFIRMED -->
+    <div id="modal-meeting" class="overlay hidden">
+        <div class="modal" style="text-align:center;">
+            <div style="width:80px; height:80px; background:#333; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid var(--adopt-color);">
+                <i class="fa-solid fa-handshake" style="font-size:2.5rem; color:var(--adopt-color);"></i>
+            </div>
+            <h3 class="text-purple">Meeting Confirmed!</h3>
+            <p style="color:gray; margin-bottom:15px;">Your adoption inquiry has been processed.</p>
+            
+            <div style="background:#2C2C2E; padding:15px; border-radius:12px; margin-bottom:15px; text-align:left;">
+                <p><strong class="text-purple">Pet:</strong> <span id="meet-pet">Max</span></p>
+                <p><strong class="text-purple">Location:</strong> <span id="meet-loc">RS Puram, Coimbatore</span></p>
+                <p><strong class="text-purple">Date:</strong> <span id="meet-date">Tomorrow</span></p>
+                <p><strong class="text-purple">Time:</strong> <span id="meet-time">10:00 AM</span></p>
+            </div>
+            
+            <button class="btn btn-purple" onclick="document.getElementById('modal-meeting').classList.add('hidden')">Done</button>
+        </div>
+    </div>
+
+    <!-- MODAL: REHOME PET -->
+    <div id="modal-rehome" class="overlay hidden">
+        <div class="modal">
+            <h3 class="text-purple">Rehome a Pet</h3>
+            <p style="color:gray; margin-bottom:15px;">Enter pet details for adoption.</p>
+            
+            <img id="adopt-preview" alt="Preview">
+            
+            <div id="adopt-camera-box" style="border:2px dashed #555; height:100px; display:flex; align-items:center; justify-content:center; border-radius:20px; background:rgba(255,255,255,0.05); margin-bottom:15px; cursor:pointer;" onclick="document.getElementById('adopt-file').click()">
+                <div class="flex center">
+                    <i class="fa-solid fa-camera text-purple" style="font-size:1.2rem;"></i>
+                    <small style="margin-left:10px;">Tap to Upload Photo</small>
+                </div>
+                <input type="file" id="adopt-file" accept="image/*" hidden onchange="app.adopt.handleFile(this)">
+            </div>
+
+            <input type="text" id="adopt-name" placeholder="Pet Name">
+            <input type="text" id="adopt-breed" placeholder="Breed">
+            <input type="text" id="adopt-age" placeholder="Age (e.g. 2 years)">
+            <textarea id="adopt-desc" rows="3" placeholder="Reason for rehoming / Behavior"></textarea>
+            
+            <button class="btn btn-purple" onclick="app.adopt.add()">Submit for Review</button>
+            <button class="btn btn-dark" style="margin-top:10px;" onclick="document.getElementById('modal-rehome').classList.add('hidden')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD PRODUCT (ADMIN) -->
+    <div id="modal-add-product" class="overlay hidden">
+        <div class="modal">
+            <h3>Add Product</h3>
+            <p style="color:gray; margin-bottom:15px;">Add new item to shop.</p>
+            
+            <img id="product-preview" alt="Preview">
+            
+            <div id="product-camera-box" style="border:2px dashed #555; height:100px; display:flex; align-items:center; justify-content:center; border-radius:20px; background:rgba(255,255,255,0.05); margin-bottom:15px; cursor:pointer;" onclick="document.getElementById('product-file').click()">
+                <div class="flex center">
+                    <i class="fa-solid fa-camera text-white" style="font-size:1.2rem;"></i>
+                    <small style="margin-left:10px;">Tap to Upload Photo</small>
+                </div>
+                <input type="file" id="product-file" accept="image/*" hidden onchange="app.admin.handleFile(this)">
+            </div>
+
+            <input type="text" id="prod-name" placeholder="Product Name">
+            <input type="text" id="prod-price" placeholder="Price (e.g. ₹200)">
+            
+            <button class="btn btn-gold" onclick="app.admin.addProduct()">Add to Store</button>
+            <button class="btn btn-dark" style="margin-top:10px;" onclick="document.getElementById('modal-add-product').classList.add('hidden')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- MODAL: REPORT MISSING -->
+    <div id="modal-report-missing" class="overlay hidden">
+        <div class="modal">
+            <h3>Report Lost Pet</h3>
+            <p style="color:gray; margin-bottom:15px;">Upload photo and details.</p>
+            
+            <img id="missing-preview" alt="Preview">
+            
+            <div id="missing-camera-box" style="border:2px dashed #555; height:100px; display:flex; align-items:center; justify-content:center; border-radius:20px; background:rgba(255,255,255,0.05); margin-bottom:15px; cursor:pointer;" onclick="document.getElementById('missing-file').click()">
+                <div class="flex center">
+                    <i class="fa-solid fa-camera text-gold" style="font-size:1.2rem;"></i>
+                    <small style="margin-left:10px;">Tap to Upload Photo</small>
+                </div>
+                <input type="file" id="missing-file" accept="image/*" hidden onchange="app.missing.handleFile(this)">
+            </div>
+
+            <input type="text" id="missing-name" placeholder="Pet Name">
+            <input type="text" id="missing-breed" placeholder="Breed">
+            <input type="text" id="missing-loc" placeholder="Last Seen Location">
+            <button class="btn btn-gold" onclick="app.missing.add()">Post Alert</button>
+            <button class="btn btn-dark" style="margin-top:10px;" onclick="document.getElementById('modal-report-missing').classList.add('hidden')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- MODAL: CHECKOUT -->
+    <div id="modal-checkout" class="overlay hidden">
+        <div class="modal">
+            <h3>Checkout</h3>
+            <p style="color:gray; margin-bottom:15px;">Enter Delivery Details</p>
+            <input type="text" id="order-name" placeholder="Full Name">
+            <input type="text" id="order-addr" placeholder="Address / Location (Coimbatore)">
+            
+            <div style="margin-bottom:15px;">
+                <p style="margin-bottom:10px; font-size:0.9rem;">Select Payment:</p>
+                
+                <!-- UPI Option -->
+                <label class="flex" style="background:#2C2C2E; padding:10px; border-radius:10px; margin-bottom:5px; cursor:pointer;" onclick="app.shop.togglePayment('UPI')">
+                    <input type="radio" name="pay" value="UPI" checked> 
+                    <span>UPI</span>
+                </label>
+                
+                <!-- Conditional UPI Fields -->
+                <div id="shop-upi-fields" style="margin-left:25px; margin-bottom:10px; padding:10px; border-left:2px solid var(--primary-gold);">
+                    <input type="text" id="shop-upi-id" placeholder="UPI ID (e.g. user@okhdfc)" style="margin-bottom:5px; padding:10px;">
+                    <input type="password" id="shop-upi-pass" placeholder="Enter UPI PIN" style="margin-bottom:0; padding:10px;">
+                </div>
+
+                <!-- COD Option -->
+                <label class="flex" style="background:#2C2C2E; padding:10px; border-radius:10px; cursor:pointer;" onclick="app.shop.togglePayment('COD')">
+                    <input type="radio" name="pay" value="COD"> 
+                    <span>Cash on Delivery</span>
+                </label>
+            </div>
+
+            <button class="btn btn-gold" onclick="app.shop.order()">Place Order</button>
+            <button class="btn btn-dark" style="margin-top:10px;" onclick="document.getElementById('modal-checkout').classList.add('hidden')">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DATABASE (LocalStorage) ---
+        const db = {
+            init: () => {
+                if (!localStorage.getItem('pawsafe_reports')) localStorage.setItem('pawsafe_reports', '[]');
+                if (!localStorage.getItem('pawsafe_missing')) {
+                    const defaults = [
+                        { id: 1, name: "Rusty", breed: "Beagle", loc: "Race Course", time: "2h ago", img: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=400&q=80" }
+                    ];
+                    localStorage.setItem('pawsafe_missing', JSON.stringify(defaults));
+                }
+                if (!localStorage.getItem('pawsafe_adopt')) {
+                    const adoptDefaults = [
+                        { id: 101, name: "Luna", breed: "Husky", age: "1 year", desc: "Very energetic, loves to run.", img: "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400" },
+                        { id: 102, name: "Max", breed: "Labrador", age: "3 years", desc: "Friendly with kids and other dogs.", img: "https://images.unsplash.com/photo-1591769225440-811ad7d6eca6?w=400" }
+                    ];
+                    localStorage.setItem('pawsafe_adopt', JSON.stringify(adoptDefaults));
+                }
+                if (!localStorage.getItem('pawsafe_orders')) localStorage.setItem('pawsafe_orders', '[]');
+                if (!localStorage.getItem('pawsafe_meetings')) localStorage.setItem('pawsafe_meetings', '[]'); 
+                
+                // SHOP DEFAULTS - POPULATING WITH REQUESTED ITEMS
+                if (!localStorage.getItem('pawsafe_shop')) {
+                    const shopDefaults = [
+                        { id:1, name:"Squeaky Rubber Ball", price:"₹200", img: "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=400" },
+                        { id:2, name:"Pet Empire Bowl", price:"₹400", img: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400" },
+                        { id:3, name:"Pedigree (3kg)", price:"₹1600", img: "https://images.unsplash.com/photo-1589924691195-41432c84c161?w=400" },
+                        { id:4, name:"Classic Collar", price:"₹200", img: "https://images.unsplash.com/photo-1568393691622-c7ba131d63b4?w=400" }
+                    ];
+                    localStorage.setItem('pawsafe_shop', JSON.stringify(shopDefaults));
+                }
+            },
+            add: (key, data) => {
+                try {
+                    const items = JSON.parse(localStorage.getItem(key));
+                    items.unshift(data);
+                    localStorage.setItem(key, JSON.stringify(items));
+                    return items;
+                } catch (e) {
+                    alert("Storage full. Use smaller image.");
+                    return null;
+                }
+            },
+            get: (key) => JSON.parse(localStorage.getItem(key)),
+            del: (key, id) => {
+                let items = JSON.parse(localStorage.getItem(key));
+                items = items.filter(i => i.id !== id);
+                localStorage.setItem(key, JSON.stringify(items));
+            }
+        };
+
+        // --- 2. AUTH ---
+        const auth = {
+            login: () => {
+                const user = document.getElementById('login-email').value.toLowerCase();
+                if(user.includes('admin')) {
+                    document.getElementById('view-login').classList.add('hidden');
+                    document.getElementById('view-admin').classList.remove('hidden');
+                    app.admin.render('rescue');
+                } else {
+                    document.getElementById('view-login').classList.add('hidden');
+                    document.getElementById('view-app').classList.remove('hidden');
+                    app.user.refresh();
+                }
+            },
+            logout: () => location.reload()
+        };
+
+        // --- 3. APP LOGIC ---
+        const app = {
+            state: { model: null, callTimer: null, currentTab: 'rescue', cartItem: null, missingImg: null, adoptImg: null, prodImg: null },
+
+            init: () => {
+                db.init();
+                app.loadAI();
+            },
+
+            loadAI: async () => { 
+                try { app.state.model = await mobilenet.load(); } catch(e) { console.log("AI Loading Error"); } 
+            },
+
+            // Navigation
+            nav: (view) => {
+                document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`screen-${view}`).classList.remove('hidden');
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                
+                const map = { 'home':0, 'adopt':1, 'report':2, 'missing':3, 'shop':4, 'profile':-1 };
+                if(map[view] >= 0) document.querySelectorAll('.nav-item')[map[view]].classList.add('active');
+                
+                if(view === 'adopt') app.user.renderAdopt();
+                if(view === 'shop') app.user.renderShop();
+                if(view === 'home') app.user.refresh();
+            },
+
+            // USER SIDE FUNCTIONS
+            user: {
+                refresh: () => {
+                    app.user.renderMissing();
+                    app.user.renderShop();
+                    app.user.renderAdopt();
+                },
+                renderMissing: () => {
+                    const pets = db.get('pawsafe_missing');
+                    const html = pets.map(p => `
+                        <div class="item-card" style="min-width:140px;">
+                            <img src="${p.img}" class="item-img">
+                            <strong>${p.name}</strong><br><small style="color:gray">${p.loc}</small>
+                        </div>`).join('');
+                    document.getElementById('home-missing-list').innerHTML = html;
+                    document.getElementById('full-missing-list').innerHTML = html.replace(/min-width:140px;/g, '');
+                },
+                renderAdopt: () => {
+                    const pets = db.get('pawsafe_adopt');
+                    const html = pets.map(p => `
+                        <div class="item-card" style="min-width:140px;">
+                            <div class="adopt-tag">ADOPT</div>
+                            <img src="${p.img}" class="item-img">
+                            <strong>${p.name}</strong> (${p.breed})<br>
+                            <small class="text-gold">${p.age}</small>
+                            <p style="font-size:0.75rem; color:#888; margin-top:5px;">${p.desc}</p>
+                            <button class="btn btn-purple" style="padding:8px; font-size:0.8rem; margin-top:10px;" onclick="app.adopt.contact('${p.name}', ${p.id})">Contact</button>
+                        </div>`).join('');
+                    document.getElementById('home-adopt-list').innerHTML = html;
+                    document.getElementById('full-adopt-list').innerHTML = html.replace(/min-width:140px;/g, '');
+                },
+                renderShop: () => {
+                    const items = db.get('pawsafe_shop'); // Fetch from DB now
+                    const html = items.map(i => `
+                        <div class="item-card">
+                            <img src="${i.img}" class="item-img">
+                            <strong>${i.name}</strong>
+                            <div class="flex space-between" style="margin-top:5px;">
+                                <span class="text-gold">${i.price}</span>
+                                <button class="btn btn-gold" style="width:30px; height:30px; padding:0; border-radius:50%;" onclick="app.shop.openCheckout('${i.name}', '${i.price}')">+</button>
+                            </div>
+                        </div>`).join('');
+                    document.getElementById('home-shop-list').innerHTML = html;
+                    document.getElementById('full-shop-list').innerHTML = html;
+                }
+            },
+
+            // REPORT & AI
+            report: {
+                handleFile: (input) => {
+                    if(input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.getElementById('preview-image');
+                            img.src = e.target.result;
+                            img.style.display = 'block';
+                            document.getElementById('camera-box').style.display='none';
+                            app.report.analyze(img);
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                },
+                analyze: async (imgElement) => {
+                    document.getElementById('ai-result').classList.remove('hidden');
+                    const textEl = document.getElementById('ai-text');
+                    textEl.innerText = "Scanning...";
+                    if (app.state.model) {
+                        try {
+                            const predictions = await app.state.model.classify(imgElement);
+                            if (predictions && predictions.length > 0) {
+                                textEl.innerHTML = `Object: <strong class="text-gold">${predictions[0].className}</strong><br>Confidence: ${Math.round(predictions[0].probability * 100)}%`;
+                            } else { textEl.innerText = "Could not identify object."; }
+                        } catch (err) { textEl.innerText = "AI Error. Proceed manual?"; }
+                    } else { setTimeout(() => textEl.innerHTML = "Identified: <strong class='text-gold'>Simulated Result</strong>", 1500); }
+                    document.getElementById('btn-send-rescue').disabled = false;
+                },
+                submit: () => {
+                    document.getElementById('call-name').innerText = "Emergency Rescue";
+                    document.getElementById('call-screen').classList.add('active');
+                    let sec = 0;
+                    app.state.callTimer = setInterval(() => { sec++; document.getElementById('call-timer').innerText = `00:${sec<10?'0'+sec:sec}`; }, 1000);
+                }
+            },
+
+            call: {
+                end: () => {
+                    clearInterval(app.state.callTimer);
+                    document.getElementById('call-screen').classList.remove('active');
+                    
+                    // If it was emergency report
+                    if(document.getElementById('call-name').innerText === "Emergency Rescue") {
+                        db.add('pawsafe_reports', { id: Date.now(), type: "Emergency Rescue", loc: "GPS Coords", time: new Date().toLocaleString(), img: document.getElementById('preview-image').src });
+                        document.getElementById('preview-image').style.display='none';
+                        document.getElementById('camera-box').style.display='flex';
+                        document.getElementById('ai-result').classList.add('hidden');
+                        document.getElementById('btn-send-rescue').disabled = true;
+                        document.getElementById('success-msg').innerText = "Rescue team dispatched.";
+                        document.getElementById('modal-success').classList.remove('hidden');
+                    }
+                }
+            },
+
+            // ADOPTION LOGIC
+            adopt: {
+                openModal: () => {
+                    app.state.adoptImg = null;
+                    document.getElementById('adopt-preview').style.display = 'none';
+                    document.getElementById('adopt-camera-box').style.display = 'flex';
+                    document.getElementById('modal-rehome').classList.remove('hidden');
+                },
+                handleFile: (input) => {
+                    if(input.files[0]) {
+                        if(input.files[0].size > 2000000) return alert("Image too large!");
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.getElementById('adopt-preview');
+                            img.src = e.target.result;
+                            img.style.display = 'block';
+                            document.getElementById('adopt-camera-box').style.display = 'none';
+                            app.state.adoptImg = e.target.result;
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                },
+                add: () => {
+                    const name = document.getElementById('adopt-name').value;
+                    const breed = document.getElementById('adopt-breed').value;
+                    const age = document.getElementById('adopt-age').value;
+                    const desc = document.getElementById('adopt-desc').value;
+                    
+                    if(!name || !breed) return alert("Name and Breed required");
+                    const imgUrl = app.state.adoptImg || "https://via.placeholder.com/150/333333/FFFFFF?text=Pet";
+
+                    db.add('pawsafe_adopt', { id: Date.now(), name, breed, age, desc, img: imgUrl });
+                    
+                    document.getElementById('modal-rehome').classList.add('hidden');
+                    document.getElementById('success-msg').innerText = "Pet listed for adoption.";
+                    document.getElementById('modal-success').classList.remove('hidden');
+                    app.user.refresh();
+                },
+                contact: (petName, petId) => {
+                    document.getElementById('call-name').innerText = "Adoption Agent";
+                    document.getElementById('call-screen').classList.add('active');
+                    let sec = 0;
+                    app.state.callTimer = setInterval(() => { sec++; document.getElementById('call-timer').innerText = `00:${sec<10?'0'+sec:sec}`; }, 1000);
+                    setTimeout(() => {
+                        clearInterval(app.state.callTimer);
+                        document.getElementById('call-screen').classList.remove('active');
+                        const locs = ["RS Puram", "Race Course", "Gandhipuram", "Peelamedu", "Brookefields"];
+                        const randLoc = locs[Math.floor(Math.random() * locs.length)] + ", Coimbatore";
+                        const randDate = new Date(); randDate.setDate(randDate.getDate() + 1);
+                        db.add('pawsafe_meetings', { id: Date.now(), pet: petName, loc: randLoc, date: randDate.toLocaleDateString(), time: "10:00 AM" });
+                        document.getElementById('meet-pet').innerText = petName;
+                        document.getElementById('meet-loc').innerText = randLoc;
+                        document.getElementById('meet-date').innerText = randDate.toLocaleDateString();
+                        document.getElementById('modal-meeting').classList.remove('hidden');
+                    }, 3000);
+                }
+            },
+
+            // MISSING LOGIC
+            missing: {
+                openModal: () => {
+                    app.state.missingImg = null;
+                    document.getElementById('missing-preview').style.display = 'none';
+                    document.getElementById('missing-camera-box').style.display = 'flex';
+                    document.getElementById('modal-report-missing').classList.remove('hidden');
+                },
+                handleFile: (input) => {
+                    if(input.files[0]) {
+                        if(input.files[0].size > 2000000) return alert("Image too large!");
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.getElementById('missing-preview');
+                            img.src = e.target.result;
+                            img.style.display = 'block';
+                            document.getElementById('missing-camera-box').style.display = 'none';
+                            app.state.missingImg = e.target.result;
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                },
+                add: () => {
+                    const name = document.getElementById('missing-name').value;
+                    const breed = document.getElementById('missing-breed').value;
+                    const loc = document.getElementById('missing-loc').value;
+                    const imgUrl = app.state.missingImg || "https://via.placeholder.com/150/333333/FFFFFF?text=No+Image";
+
+                    db.add('pawsafe_missing', { id: Date.now(), name, breed, loc, time: "Just now", img: imgUrl });
+                    document.getElementById('modal-report-missing').classList.add('hidden');
+                    document.getElementById('success-msg').innerText = "Missing alert posted.";
+                    document.getElementById('modal-success').classList.remove('hidden');
+                    app.user.refresh();
+                }
+            },
+
+            // SHOP LOGIC
+            shop: {
+                openCheckout: (name, price) => {
+                    app.state.cartItem = { name, price };
+                    document.getElementById('shop-upi-fields').style.display = 'block'; 
+                    document.querySelector('input[name="pay"][value="UPI"]').checked = true;
+                    document.getElementById('modal-checkout').classList.remove('hidden');
+                },
+                togglePayment: (method) => {
+                    document.getElementById('shop-upi-fields').style.display = (method === 'UPI') ? 'block' : 'none';
+                },
+                order: () => {
+                    const name = document.getElementById('order-name').value;
+                    const addr = document.getElementById('order-addr').value;
+                    if(!name || !addr) return alert("Please fill Name and Address");
+                    
+                    const payMethod = document.querySelector('input[name="pay"]:checked').value;
+                    let payDetails = "COD";
+                    if(payMethod === 'UPI') {
+                        const uid = document.getElementById('shop-upi-id').value;
+                        const upin = document.getElementById('shop-upi-pass').value;
+                        if(!uid || !upin) return alert("Please enter UPI Details");
+                        payDetails = `UPI: ${uid}`;
+                    }
+                    db.add('pawsafe_orders', { id: Date.now(), customer: name, address: addr, item: app.state.cartItem.name, price: app.state.cartItem.price, payment: payDetails });
+                    document.getElementById('modal-checkout').classList.add('hidden');
+                    document.getElementById('success-msg').innerText = "Order Placed! Admin notified.";
+                    document.getElementById('modal-success').classList.remove('hidden');
+                }
+            },
+
+            // ADMIN LOGIC
+            admin: {
+                switchTab: (tab) => {
+                    app.state.currentTab = tab;
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    event.target.classList.add('active');
+                    app.admin.render(tab);
+                    // Show Add Product button only in Store tab
+                    const addBtn = document.getElementById('admin-add-prod-btn');
+                    if(tab === 'store') addBtn.classList.remove('hidden');
+                    else addBtn.classList.add('hidden');
+                },
+                openAddProduct: () => {
+                    app.state.prodImg = null;
+                    document.getElementById('product-preview').style.display = 'none';
+                    document.getElementById('product-camera-box').style.display = 'flex';
+                    document.getElementById('modal-add-product').classList.remove('hidden');
+                },
+                handleFile: (input) => {
+                     if(input.files[0]) {
+                        if(input.files[0].size > 2000000) return alert("Image too large!");
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.getElementById('product-preview');
+                            img.src = e.target.result;
+                            img.style.display = 'block';
+                            document.getElementById('product-camera-box').style.display = 'none';
+                            app.state.prodImg = e.target.result;
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                },
+                addProduct: () => {
+                    const name = document.getElementById('prod-name').value;
+                    const price = document.getElementById('prod-price').value;
+                    if(!name || !price) return alert("Details required");
+                    const imgUrl = app.state.prodImg || "https://via.placeholder.com/150/333333/FFFFFF?text=Product";
+                    
+                    db.add('pawsafe_shop', { id: Date.now(), name, price, img: imgUrl });
+                    document.getElementById('modal-add-product').classList.add('hidden');
+                    app.admin.render('store');
+                },
+                render: (tab) => {
+                    const container = document.getElementById('admin-list-container');
+                    container.innerHTML = '';
+                    let data = [];
+                    let key = '';
+
+                    if(tab === 'rescue') { key='pawsafe_reports'; data = db.get(key); }
+                    else if(tab === 'missing') { key='pawsafe_missing'; data = db.get(key); }
+                    else if(tab === 'orders') { key='pawsafe_orders'; data = db.get(key); }
+                    else if(tab === 'store') { key='pawsafe_shop'; data = db.get(key); }
+                    else if(tab === 'adopt') {
+                        // Manual Adopt Render
+                        const listings = db.get('pawsafe_adopt') || [];
+                        const meetings = db.get('pawsafe_meetings') || [];
+                        container.innerHTML = `<h4 class="text-gold" style="margin-bottom:10px;">Meetings</h4>`;
+                        if(meetings.length === 0) container.innerHTML += `<p style="color:gray; font-size:0.8rem; margin-bottom:20px;">No scheduled meetings.</p>`;
+                        meetings.forEach(m => {
+                            container.innerHTML += `<div class="admin-card meeting"><strong>Meeting for ${m.pet}</strong><br><small>${m.date} @ ${m.time}</small><br><small style="color:#aaa;">${m.loc}</small><button class="delete-btn" onclick="app.admin.del('pawsafe_meetings', ${m.id})"><i class="fa-solid fa-check"></i></button></div>`;
+                        });
+                        container.innerHTML += `<h4 class="text-purple" style="margin-bottom:10px; margin-top:20px;">Listings</h4>`;
+                        listings.forEach(item => {
+                            container.innerHTML += `<div class="admin-card adopt"><div class="flex"><img src="${item.img}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;"><div><strong>${item.name}</strong> (${item.age})<br><small style="color:gray">${item.desc.substring(0,30)}...</small></div></div><button class="delete-btn" onclick="app.admin.del('pawsafe_adopt', ${item.id})"><i class="fa-solid fa-trash"></i></button></div>`;
+                        });
+                        return;
+                    }
+
+                    if(!data || data.length === 0) return container.innerHTML = '<p style="text-align:center; color:gray; margin-top:20px;">No Data</p>';
+
+                    data.forEach(item => {
+                        let html = '';
+                        if(tab === 'rescue') {
+                            html = `<div class="admin-card rescue"><strong>Rescue #${item.id}</strong><br><small>${item.time}</small><div style="margin-top:5px;"><img src="${item.img}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;"></div><button class="delete-btn" onclick="app.admin.del('${key}', ${item.id})"><i class="fa-solid fa-check"></i></button></div>`;
+                        } else if (tab === 'missing') {
+                            html = `<div class="admin-card missing"><div class="flex"><img src="${item.img}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;"><div><strong>${item.name}</strong> (${item.breed})<br><small>Last seen: ${item.loc}</small></div></div><button class="delete-btn" onclick="app.admin.del('${key}', ${item.id})"><i class="fa-solid fa-trash"></i></button></div>`;
+                        } else if (tab === 'orders') {
+                            html = `<div class="admin-card order"><strong>${item.item}</strong> - ${item.price}<br><small>To: ${item.customer} (${item.address})</small><br><small style="color:#aaa">Pay: ${item.payment}</small><button class="delete-btn" onclick="app.admin.del('${key}', ${item.id})"><i class="fa-solid fa-check"></i></button></div>`;
+                        } else if (tab === 'store') {
+                             html = `<div class="admin-card store"><div class="flex"><img src="${item.img}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;"><div><strong>${item.name}</strong><br><span class="text-gold">${item.price}</span></div></div><button class="delete-btn" onclick="app.admin.del('${key}', ${item.id})"><i class="fa-solid fa-trash"></i></button></div>`;
+                        }
+                        container.innerHTML += html;
+                    });
+                },
+                del: (key, id) => {
+                    db.del(key, id);
+                    app.admin.render(app.state.currentTab);
+                }
+            }
+        };
+
+        window.onload = app.init;
+    </script>
+</body>
+</html>
